@@ -1,11 +1,9 @@
 package bep
 
 import bep.core._
-import bep.free.{Fork, Free, Pure}
 import bep.interp.Interpreter
 import bep.interp.Interpreter.Result
 import bep.syntax.Syntax._
-import javax.xml.crypto.KeySelector.Purpose
 
 /**
   * @author Adrian Mensing
@@ -30,22 +28,16 @@ object App {
     val code = Interpreter.concat(List(
       f(n) :-
         matching(n)
-          -> (Pattern(x), x)
-          -> (Pattern(x), f(Plus(x, Num(1)))),
+          -> (Pattern(Num(3)), Num(5))
+          -> (Pattern(Num(4)), Num(6))
+          -> (Pattern(Num(8)), Num(6)),
 
-      f(Num(0))
-
-//      length(L) :-
-//        matching(L)
-//          -> (Pattern(Empty), Num(0))
-//          -> (Pattern(Cons(x, xs)), Plus(Num(1), length(xs))),
-//
-//      length(Cons(1, Cons(2, Cons(3, Cons(4, Empty)))))
+      Exists(n, Equals(Num(6), f(n)))
     ))
 
     val result = Interpreter.interp(code)
 
-    result.bfs().take(5).foreach(p => println(formalized(p)))
+    result.bfs().take(5).foreach(p => println(p._2.binds))
   }
 
   def formalized(result: Result): String = result._1 match {

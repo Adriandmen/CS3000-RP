@@ -19,3 +19,8 @@ case class Case(x: Expr, patterns: List[(Pattern, Expr)])     extends Expr {
   def -> : sCaseWithPattern = sCaseWithPattern(x, patterns)
 }
 case class Pattern(p: Expr)                                   extends Expr
+
+
+abstract class LogicExpr extends Expr
+case class Equals(left: Expr, right: Expr)                    extends LogicExpr
+case class Exists(v: Var, cond: LogicExpr)                    extends LogicExpr

@@ -2,7 +2,7 @@ package bep.interp
 
 import bep.`match`.Matcher
 import bep.core._
-import bep.free.{Fork, Free, Pure}
+import bep.free.{Flow, Fork, Free, Pure}
 
 object Interpreter {
 
@@ -10,7 +10,10 @@ object Interpreter {
 
   var freshIndex = 0
 
-  def interp(expr: Expr): Free[Result] = interp(expr, Environment(Nil))
+  val True = ValV("True", Nil)
+  val False = ValV("False", Nil)
+
+  def interp(expr: Expr): Free[Result] = interp(expr, Environment(Set()))
 
   def interp(expr: Expr, env: Environment): Free[Result] = {
     def pure(v: Value): Free[Result] = Pure((v, env))
@@ -28,11 +31,15 @@ object Interpreter {
         val freeVars = function.args ++ innerVars.toList
         val freshParams = function.args.map(_ => fresh())
 
-        val env2 = args.map(a => interp(a, env).get()._1)
-                       .zip(freshParams)
-                       .foldLeft(env)((e, v) => e.bind(v._2.asInstanceOf[Var].name, v._1))
+        val env2 = Matcher.doMatch(args.map(a => interp(a, env).get()._1), freshParams.map(a => interp(a, env).get()._1), env)
+
+//        val env2 = args.map(a => interp(a, env).get()._1)
+//                       .zip(freshParams)
+//                       .foldLeft(env)((e, v) => e.bind(v._2.asInstanceOf[Var].name, v._1))
 
         val functionBody = freeVars.zip(freshParams ++ innerVars.toList.map(_ => fresh())).foldLeft(function.body)((body, v) => subst(body, v._1.asInstanceOf[Var], v._2))
+
+//        printBinds(env2.binds)
 
         interp(functionBody, env2)
 
@@ -48,6 +55,17 @@ object Interpreter {
       case Var(name) => pure(env.get(name))
 
       case Pattern(p) => interp(p, env)
+
+      case Exists(v, cond) => interp(cond, env).bind(rs => Pure((rs._2.get(v.name), rs._2)))
+
+      case Equals(left, right) =>
+        val solutions = for {
+          l <- interp(left, env).bfs()
+          r <- interp(right, env).bfs()
+          if l._1.equals(r._1)
+        } yield (l, r)
+
+        Flow[Result](solutions.map(t => Pure[Result]((True, Environment(t._1._2.binds ++ t._2._2.binds)))))
 
       case Case(e, ps) =>
         interp(e, env).bind(v => Fork(v, ps, (value, patterns) => forkValues(value, patterns, env)))
@@ -94,5 +112,16 @@ object Interpreter {
       .map(x => (x._2, Matcher.doSingleMatch(interp(x._1, env).get(), v)))
       .filter(x => x._2 != null)
       .map(x => interp(x._1, x._2))
+  }
+
+  def printBinds(binds: List[Bind]): Unit = binds match {
+    case (b @ Bind(n, VarV(_))) :: bs =>
+      println(b)
+      printBinds(bs)
+    case (b @ Bind(n, ValV(_, _))) :: bs =>
+      println(b)
+      printBinds(bs)
+    case _ :: bs => printBinds(bs)
+    case Nil => Unit
   }
 }

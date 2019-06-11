@@ -1,6 +1,6 @@
 package bep
 
-import bep.core.{Expr, Num, NumV, Pattern, Plus, Val, Var}
+import bep.core.{Expr, Num, NumV, Pattern, Plus, Val, ValV, Var}
 import bep.interp.Interpreter
 import bep.syntax.Syntax.{letrec, matching}
 import org.scalatest.FunSuite
@@ -20,7 +20,7 @@ class InterpTest extends FunSuite {
 
   test("normal length method") {
     assertResult(
-      NumV(4)
+      ValV(4, Nil)
     ) {
       val code = Interpreter.concat(List(
 

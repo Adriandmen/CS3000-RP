@@ -18,6 +18,8 @@ object Matcher {
     (left, right) match {
       case (ValV(n1, ns1), ValV(n2, ns2)) if n1.equals(n2) => doMatch(ns1, ns2, env)
       case (VarV(name), v @ ValV(_, _)) => env.bind(name, v)
+      case (v @ ValV(_, _), VarV(name)) => env.bind(name, v)
+      case (VarV(n1), VarV(n2)) => env.bind(n1, VarV(n2)).bind(n2, VarV(n1))
       case _ => null
     }
   }

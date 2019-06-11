@@ -27,6 +27,7 @@ object Free {
       case Pure(x) #:: xs => x #:: bfs(xs)
       case Lift(x) #:: xs => bfs(xs #::: Stream(x))
       case (f @ Fork(_, _, _)) #:: xs => bfs(xs #::: f.values())
+      case Flow(x) #:: xs => bfs(xs #::: x)
       case x => throw new IllegalArgumentException(s"Could not parse $x")
     }
   }
