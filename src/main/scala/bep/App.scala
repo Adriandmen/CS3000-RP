@@ -9,7 +9,6 @@ import bep.syntax.Syntax._
   */
 object App {
 
-  private def λ(e: Expr) = matching(e)
   private def length = letrec("length")
 
   private def L = Var("L")
