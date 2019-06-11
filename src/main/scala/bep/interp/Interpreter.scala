@@ -17,7 +17,7 @@ object Interpreter {
 
 //    println(s"env = ${env}")
 //    println(s"expr = ${expr}")
-    
+
     expr match {
       case Seq(left, right) => interp(left, env).bind(r1 => interp(right, r1._2))
 

@@ -1,8 +1,11 @@
 package bep
 
 import bep.core._
+import bep.free.{Fork, Free, Pure}
 import bep.interp.Interpreter
+import bep.interp.Interpreter.Result
 import bep.syntax.Syntax._
+import javax.xml.crypto.KeySelector.Purpose
 
 /**
   * @author Adrian Mensing
@@ -10,8 +13,10 @@ import bep.syntax.Syntax._
 object App {
 
   private def length = letrec("length")
+  private def f = letrec("f")
 
   private def L = Var("L")
+  private def n = Var("n")
   private def x = Var("x")
   private def xs = Var("xs")
   private val Empty = Val("Empty", Nil)
@@ -23,18 +28,25 @@ object App {
 
   def main(args : Array[String]): Unit = {
     val code = Interpreter.concat(List(
+      f(n) :-
+        matching(n)
+          -> (Pattern(x), f(Plus(x, Num(1))))
+          -> (Pattern(x), Num(0)),
 
-      length(L) :-
-        matching(L)
-          -> (Pattern(Empty), Num(0))
-          -> (Pattern(Cons(x, xs)), Plus(Num(1), length(xs))),
+      f(Num(0))
 
-      length(Cons(1, Cons(2, Cons(3, Cons(4, Empty)))))
+//      length(L) :-
+//        matching(L)
+//          -> (Pattern(Empty), Num(0))
+//          -> (Pattern(Cons(x, xs)), Plus(Num(1), length(xs))),
+//
+//      length(Cons(1, Cons(2, Cons(3, Cons(4, Empty)))))
     ))
 
     val result = Interpreter.interp(code)
 
-    println("result = " + result.get()._1)
+    println(result.asInstanceOf[Fork[Result]].patterns.foreach(p => println(p)))
+//    result.values().toList.foreach(p => p.values().foreach(p2 => println(p2)))
+//    println("result = " + result.get()._1)
   }
-
 }
