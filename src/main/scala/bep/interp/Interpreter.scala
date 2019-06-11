@@ -15,9 +15,6 @@ object Interpreter {
   def interp(expr: Expr, env: Environment): Free[Result] = {
     def pure(v: Value): Free[Result] = Pure((v, env))
 
-//    println(s"env = ${env}")
-//    println(s"expr = ${expr}")
-
     expr match {
       case Seq(left, right) => interp(left, env).bind(r1 => interp(right, r1._2))
 
@@ -39,11 +36,11 @@ object Interpreter {
 
         interp(functionBody, env2)
 
-      case Num(n) => pure(NumV(n))
+      case Num(n) => pure(ValV(n, Nil))
 
       case Plus(left, right) =>
         interp(left, env).bind(r1 => interp(right, r1._2).bind(r2 => (r1._1, r2._1) match {
-          case (NumV(n1), NumV(n2)) => pure(NumV(n1 + n2))
+          case (ValV(n1, Nil), ValV(n2, Nil)) if n1.isInstanceOf[Int] && n2.isInstanceOf[Int] => pure(ValV(n1.asInstanceOf[Int] + n2.asInstanceOf[Int], Nil))
         }))
 
       case Val(v, vs) => pure(ValV(v, vs.map(x => interp(x, env).get()._1)))

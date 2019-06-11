@@ -30,8 +30,8 @@ object App {
     val code = Interpreter.concat(List(
       f(n) :-
         matching(n)
-          -> (Pattern(x), f(Plus(x, Num(1))))
-          -> (Pattern(x), Num(0)),
+          -> (Pattern(x), x)
+          -> (Pattern(x), f(Plus(x, Num(1)))),
 
       f(Num(0))
 
@@ -45,8 +45,11 @@ object App {
 
     val result = Interpreter.interp(code)
 
-    println(result.asInstanceOf[Fork[Result]].patterns.foreach(p => println(p)))
-//    result.values().toList.foreach(p => p.values().foreach(p2 => println(p2)))
-//    println("result = " + result.get()._1)
+    result.bfs().take(5).foreach(p => println(formalized(p)))
+  }
+
+  def formalized(result: Result): String = result._1 match {
+    case ValV(n, Nil) => n.toString
+    case x => x.toString
   }
 }

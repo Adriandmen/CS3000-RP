@@ -11,22 +11,24 @@ abstract class Free[A] {
   def values(): Stream[Free[A]]
 
   def get(): A
+
+  def bfs(): Stream[A]
 }
 
 object Free {
-  def step[A](free: Stream[Free[A]]): Stream[Free[A]] = {
-    free match {
-      case Pure(_) #:: xs => xs
-      case (f @ Fork(_, _, _)) #:: xs => xs #::: f.asInstanceOf[Fork[A]].values()
-      case Empty => Empty
-      case x => throw new IllegalArgumentException(s"Could not parse $x")
-    }
+  def lift[A](free: Free[A]): Free[A] = free match {
+    case Pure(x) => Lift(Pure(x))
+    case x => x
   }
 
-  def bfs[A](free: Stream[Free[A]]): A = free match {
-    case Empty => Nil.asInstanceOf[A]
-    case Pure(x) #:: _ => x
-    case _ => bfs(step(free))
+  def bfs[A](free: Stream[Free[A]]): Stream[A] = {
+    free match {
+      case Empty => Empty
+      case Pure(x) #:: xs => x #:: bfs(xs)
+      case Lift(x) #:: xs => bfs(xs #::: Stream(x))
+      case (f @ Fork(_, _, _)) #:: xs => bfs(xs #::: f.values())
+      case x => throw new IllegalArgumentException(s"Could not parse $x")
+    }
   }
 }
 
@@ -36,6 +38,8 @@ case class Pure[A](x: A) extends Free[A] {
   override def values(): Stream[Free[A]] = Stream(Pure(x))
 
   override def get(): A = x
+
+  override def bfs(): Stream[A] = Free.bfs(this.values())
 }
 
 case class Fork[A](v: A, patterns: List[(Pattern, Expr)], f: (A, List[(Pattern, Expr)]) => Stream[Free[A]]) extends Free[A] {
@@ -43,7 +47,9 @@ case class Fork[A](v: A, patterns: List[(Pattern, Expr)], f: (A, List[(Pattern, 
 
   override def values(): Stream[Free[A]] = f(v, patterns)
 
-  override def get(): A = Free.bfs(this.values())
+  override def get(): A = this.bfs().head
+
+  override def bfs(): Stream[A] = Free.bfs(this.values())
 }
 
 case class Flow[A](x: Stream[Free[A]]) extends Free[A] {
@@ -51,5 +57,17 @@ case class Flow[A](x: Stream[Free[A]]) extends Free[A] {
 
   override def values(): Stream[Free[A]] = x
 
-  override def get(): A = x.head.get()
+  override def get(): A = this.bfs().head
+
+  override def bfs(): Stream[A] = Free.bfs(x)
+}
+
+case class Lift[A](x: Free[A]) extends Free[A] {
+  override def bind(k: A => Free[A]): Free[A] = x.bind(k)
+
+  override def values(): Stream[Free[A]] = x.values()
+
+  override def get(): A = x.get()
+
+  override def bfs(): Stream[A] = x.bfs()
 }
