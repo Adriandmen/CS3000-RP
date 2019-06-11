@@ -33,13 +33,7 @@ object Interpreter {
 
         val env2 = Matcher.doMatch(args.map(a => interp(a, env).get()._1), freshParams.map(a => interp(a, env).get()._1), env)
 
-//        val env2 = args.map(a => interp(a, env).get()._1)
-//                       .zip(freshParams)
-//                       .foldLeft(env)((e, v) => e.bind(v._2.asInstanceOf[Var].name, v._1))
-
         val functionBody = freeVars.zip(freshParams ++ innerVars.toList.map(_ => fresh())).foldLeft(function.body)((body, v) => subst(body, v._1.asInstanceOf[Var], v._2))
-
-//        printBinds(env2.binds)
 
         interp(functionBody, env2)
 

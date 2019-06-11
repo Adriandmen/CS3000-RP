@@ -15,6 +15,7 @@ object App {
 
   private def L = Var("L")
   private def n = Var("n")
+  private def m = Var("m")
   private def x = Var("x")
   private def xs = Var("xs")
   private val Empty = Val("Empty", Nil)
@@ -37,7 +38,7 @@ object App {
 
     val result = Interpreter.interp(code)
 
-    result.bfs().take(5).foreach(p => println(p._2.binds))
+    result.bfs().take(5).foreach(p => println(formalized(p)))
   }
 
   def formalized(result: Result): String = result._1 match {
