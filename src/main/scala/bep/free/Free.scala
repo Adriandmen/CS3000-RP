@@ -5,7 +5,7 @@ import bep.core.{Expr, Pattern, Value}
 import language.higherKinds
 import scala.collection.immutable.Stream.Empty
 
-abstract class Free[A] {
+trait Free[A] {
   def bind(k: A => Free[A]): Free[A]
 
   def values(): Stream[Free[A]]
@@ -16,16 +16,10 @@ abstract class Free[A] {
 }
 
 object Free {
-  def lift[A](free: Free[A]): Free[A] = free match {
-    case Pure(x) => Lift(Pure(x))
-    case x => x
-  }
-
   def bfs[A](free: Stream[Free[A]]): Stream[A] = {
     free match {
       case Empty => Empty
       case Pure(x) #:: xs => x #:: bfs(xs)
-      case Lift(x) #:: xs => bfs(xs #::: Stream(x))
       case (f @ Fork(_, _, _)) #:: xs => bfs(xs #::: f.values())
       case Flow(x) #:: xs => bfs(xs #::: x)
       case x => throw new IllegalArgumentException(s"Could not parse $x")
@@ -54,21 +48,11 @@ case class Fork[A](v: A, patterns: List[(Pattern, Expr)], f: (A, List[(Pattern, 
 }
 
 case class Flow[A](x: Stream[Free[A]]) extends Free[A] {
-  override def bind(k: A => Free[A]): Free[A] = Flow(x.map(f => k(f.get())))
+  override def bind(k: A => Free[A]): Free[A] = Flow(x.map(f => f.bind(k)))
 
   override def values(): Stream[Free[A]] = x
 
   override def get(): A = this.bfs().head
 
   override def bfs(): Stream[A] = Free.bfs(x)
-}
-
-case class Lift[A](x: Free[A]) extends Free[A] {
-  override def bind(k: A => Free[A]): Free[A] = x.bind(k)
-
-  override def values(): Stream[Free[A]] = x.values()
-
-  override def get(): A = x.get()
-
-  override def bfs(): Stream[A] = x.bfs()
 }

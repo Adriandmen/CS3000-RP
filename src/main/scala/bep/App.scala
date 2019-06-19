@@ -12,8 +12,12 @@ object App {
 
   private def length = letrec("length")
   private def f = letrec("f")
+  private def amb = letrec("amb")
+  private def coin = letrec("coin")
 
   private def L = Var("L")
+  private def a = Var("a")
+  private def b = Var("b")
   private def n = Var("n")
   private def m = Var("m")
   private def x = Var("x")
@@ -27,18 +31,31 @@ object App {
 
   def main(args : Array[String]): Unit = {
     val code = Interpreter.concat(List(
-      f(n) :-
-        matching(n)
-          -> (Pattern(Num(3)), Num(5))
-          -> (Pattern(Num(4)), Num(6))
-          -> (Pattern(Num(8)), Num(6)),
+//      amb(a, b) :- matching(Var("dummy"))
+//        -> (Pattern(Val("dummy1", Nil)), a)
+//        -> (Pattern(Val("dummy2", Nil)), b),
+//
+//      coin() :- amb(Num(0), Num(1)),
+//
+//      coin()
+      length(L) :-
+        matching(L)
+          -> (Pattern(Empty), Num(0))
+          -> (Pattern(Cons(x, xs)), Plus(Num(1), length(xs))),
 
-      Exists(n, Equals(Num(6), f(n)))
+      Exists(Var("l"), Equals(length(Var("l")), Num(2)))
     ))
+
+    println(code)
+
+    return
 
     val result = Interpreter.interp(code)
 
-    result.bfs().take(5).foreach(p => println(formalized(p)))
+//    println(code)
+    println(result.bfs().map(r => formalized(r)).toSet)
+
+//    result.bfs().head.foreach(p => println(formalized(p)))
   }
 
   def formalized(result: Result): String = result._1 match {
@@ -46,3 +63,11 @@ object App {
     case x => x.toString
   }
 }
+
+
+//      length(L) :- matching(L)
+//        -> (Pattern(Empty), Num(0))
+//        -> (Pattern(Cons(x, xs)), Plus(Num(1), length(xs))),
+
+//      Exists(n, Equals(length(n), Num(1)))
+//      Cons(1, Cons(2, Cons(3, Cons(4, Empty))))

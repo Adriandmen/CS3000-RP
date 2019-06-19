@@ -9,6 +9,7 @@ object Interpreter {
   type Result = (Value, Environment)
 
   var freshIndex = 0
+  val MAX_INSTANTIATION_NO = 100
 
   val True = ValV("True", Nil)
   val False = ValV("False", Nil)
@@ -59,7 +60,7 @@ object Interpreter {
           if l._1.equals(r._1)
         } yield (l, r)
 
-        Flow[Result](solutions.map(t => Pure[Result]((True, Environment(t._1._2.binds ++ t._2._2.binds)))))
+        solutions.map(t => Pure[Result]((True, Matcher.doSingleMatch(t._1._1, t._2._1, Environment(t._1._2.binds ++ t._2._2.binds))))).head
 
       case Case(e, ps) =>
         interp(e, env).bind(v => Fork(v, ps, (value, patterns) => forkValues(value, patterns, env)))
@@ -68,6 +69,10 @@ object Interpreter {
 
   def fresh(): Var = {
     freshIndex += 1
+
+    if (freshIndex > MAX_INSTANTIATION_NO)
+      throw new InstantiationError("Maximum instantiation depth reached")
+
     Var(s"_$freshIndex")
   }
 

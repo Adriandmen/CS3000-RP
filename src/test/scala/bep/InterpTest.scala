@@ -1,14 +1,19 @@
 package bep
 
+import bep.App.{a, amb, b}
 import bep.core.{Equals, Exists, Expr, Num, NumV, Pattern, Plus, Val, ValV, Var}
 import bep.interp.Interpreter
+import bep.interp.Interpreter.Result
 import bep.syntax.Syntax.{letrec, matching}
 import org.scalatest.FunSuite
 
 class InterpTest extends FunSuite {
 
+  private def amb = letrec("amb")
   private def length = letrec("length")
   private def f = letrec("f")
+  private def a = Var("a")
+  private def b = Var("b")
   private def L = Var("L")
   private def n = Var("n")
   private def x = Var("x")
@@ -18,6 +23,11 @@ class InterpTest extends FunSuite {
     case Var(_) => Val("Cons", List(e1.asInstanceOf[Var], e2))
     case Val(_, _) => Val("Cons", List(e1.asInstanceOf[Val], e2))
     case _ => Val("Cons", List(Val(e1, Nil), e2))
+  }
+
+  def formalized(result: Result): String = result._1 match {
+    case ValV(n, Nil) => n.toString
+    case x => x.toString
   }
 
   test("normal length method") {
@@ -52,6 +62,22 @@ class InterpTest extends FunSuite {
       ))
 
       Interpreter.interp(code).get()._1
+    }
+  }
+
+  test("ambiguity method") {
+    assertResult(
+      Set("0", "1", "2")
+    ) {
+      val code = Interpreter.concat(List(
+        amb(a, b) :- matching(Var("dummy"))
+          -> (Pattern(Val("dummy1", Nil)), a)
+          -> (Pattern(Val("dummy2", Nil)), b),
+
+        Plus(amb(Num(0), Num(1)), amb(Num(0), Num(1)))
+      ))
+
+      Interpreter.interp(code).bfs().map(v => formalized(v)).toSet
     }
   }
 }
