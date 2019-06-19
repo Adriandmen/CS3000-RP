@@ -1,23 +1,13 @@
 package bep.interp
 
-import bep.core.{ValV, Value, Var, VarV}
+import bep.core.Expr.Var
+import bep.core.Value
 
-case class Bind(name: String, value: Value)
-case class Environment(binds: Set[Bind]) {
-  def bind(name: String, value: Value): Environment = Environment(binds + Bind(name, value))
+case class Environment(maps: Map[String, Value]) {
+  def bind(v: Var, value: Value): Environment = bind(v.name, value)
+  def bind(name: String, value: Value): Environment = Environment(maps + (name -> value))
 
-  def get(v: Var): Value = get(v.name)
-  def get(name: String): Value = {
-    val bs = binds.filter(b => b.name == name)
+  def get(name: String): Value = maps(name)
 
-    bs.find {
-      case Bind(_, ValV(_, _)) => true
-      case _ => false
-    }.getOrElse(bs.headOption.getOrElse(Bind(name, VarV(name)))).value
-  }
-
-//  def unify(): Environment = {
-//    binds.foreach()
-//  }
+  def ++(env: Environment): Environment = Environment(maps ++ env.maps)
 }
-

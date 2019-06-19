@@ -1,73 +1,44 @@
 package bep
 
-import bep.core._
+import bep.Lib._
+import bep.core.Value
+import bep.core.Expr._
+import bep.core.Pattern.{ValP, VarP}
+import bep.core.Value.ValV
 import bep.interp.Interpreter
-import bep.interp.Interpreter.Result
-import bep.syntax.Syntax._
 
 /**
-  * @author Adrian Mensing
+  * @author ${user.name}
   */
 object App {
 
-  private def length = letrec("length")
-  private def f = letrec("f")
-  private def amb = letrec("amb")
-  private def coin = letrec("coin")
-
-  private def L = Var("L")
-  private def a = Var("a")
-  private def b = Var("b")
-  private def n = Var("n")
-  private def m = Var("m")
-  private def x = Var("x")
-  private def xs = Var("xs")
-  private val Empty = Val("Empty", Nil)
-  private val Cons: (Any, Expr) => Val = (e1, e2) => e1 match {
-    case Var(_) => Val("Cons", List(e1.asInstanceOf[Var], e2))
-    case Val(_, _) => Val("Cons", List(e1.asInstanceOf[Val], e2))
-    case _ => Val("Cons", List(Val(e1, Nil), e2))
-  }
 
   def main(args : Array[String]): Unit = {
-    val code = Interpreter.concat(List(
-//      amb(a, b) :- matching(Var("dummy"))
-//        -> (Pattern(Val("dummy1", Nil)), a)
-//        -> (Pattern(Val("dummy2", Nil)), b),
-//
-//      coin() :- amb(Num(0), Num(1)),
-//
-//      coin()
-      length(L) :-
-        matching(L)
-          -> (Pattern(Empty), Num(0))
-          -> (Pattern(Cons(x, xs)), Plus(Num(1), length(xs))),
 
-      Exists(Var("l"), Equals(length(Var("l")), Num(2)))
-    ))
+    val list1 = Cons(Num(1), Cons(Num(2), Empty))
+    val list2 = Cons(Num(3), Cons(Num(4), Cons(Num(5), Empty)))
 
-    println(code)
+    val code = Letrec(
+      List(
+        (Var("append"), Function(Var("x"), Function(Var("ys"), Match(Var("x"), List(
+          Case(ValP("Empty", Nil), Var("ys")),
+          Case(ValP("Cons", List(VarP("a"), VarP("as"))), Val("Cons", List(Var("a"), Apply(Apply(Var("append"), Var("as")), Var("ys")))))
+        ))))),
 
-    return
+        (Var("map"), Function(Var("f"), Function(Var("list"), Match(Var("list"), List(
+          Case(ValP("Empty", Nil), Val("Empty", Nil)),
+          Case(ValP("Cons", List(VarP("l"), VarP("ls"))), Val("Cons", List(Apply(Var("f"), Var("l")), Apply(Apply(Var("map"), Var("f")), Var("ls")))))
+        ))))),
+      ),
+      Apply(Apply(Var("map"), Function(Var("x"), Plus(Var("x"), Var("x")))), Cons(Num(1), Cons(Num(2), Cons(Num(3), Empty))))
+    )
 
-    val result = Interpreter.interp(code)
-
-//    println(code)
-    println(result.bfs().map(r => formalized(r)).toSet)
-
-//    result.bfs().head.foreach(p => println(formalized(p)))
+    println(formalized(Interpreter.interp(code)))
   }
 
-  def formalized(result: Result): String = result._1 match {
-    case ValV(n, Nil) => n.toString
+  def formalized(value: Value): String = value match {
+    case ValV(x, Nil) => x.toString
+    case ValV(x, xs) => s"$x(${xs.map(formalized).mkString(", ")})"
     case x => x.toString
   }
 }
-
-
-//      length(L) :- matching(L)
-//        -> (Pattern(Empty), Num(0))
-//        -> (Pattern(Cons(x, xs)), Plus(Num(1), length(xs))),
-
-//      Exists(n, Equals(length(n), Num(1)))
-//      Cons(1, Cons(2, Cons(3, Cons(4, Empty))))

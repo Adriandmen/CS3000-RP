@@ -1,26 +1,15 @@
 package bep.core
 
-import bep.syntax.sCaseWithPattern
+trait Expr[-R]
 
-abstract class Expr
+object Expr {
+  case class Var(name: String) extends Expr[Value]
+  case class Val(value: Any, args: List[Expr[Value]]) extends Expr[Value]
+  case class Function(arg: Var, body: Expr[Value]) extends Expr[Value]
+  case class Letrec(bindings: List[(Var, Function)], body: Expr[Value]) extends Expr[Value]
+  case class Case(pattern: Pattern, body: Expr[Value]) extends Expr[Value]
+  case class Match(arg: Expr[Value], cases: List[Case]) extends Expr[Value]
+  case class Apply(body: Expr[Value], arg: Expr[Value]) extends Expr[Value]
 
-case class Seq(left: Expr, right: Expr)                       extends Expr
-case class Num(num: Int)                                      extends Expr
-case class Plus(left: Expr, right: Expr)                      extends Expr
-case class Letrec(name: String, args: List[Expr], body: Expr) extends Expr
-case class Call(name: String, args: List[Expr])               extends Expr {
-  def :-(body: Expr): Expr = Letrec(name, args, body)
+  case class Plus(left: Expr[Value], right: Expr[Value]) extends Expr[Value]
 }
-
-case class Val(name: Any, args: List[Expr])                   extends Expr
-case class Var(name: String)                                  extends Expr
-
-case class Case(x: Expr, patterns: List[(Pattern, Expr)])     extends Expr {
-  def -> : sCaseWithPattern = sCaseWithPattern(x, patterns)
-}
-case class Pattern(p: Expr)                                   extends Expr
-
-
-abstract class LogicExpr extends Expr
-case class Equals(left: Expr, right: Expr)                    extends LogicExpr
-case class Exists(v: Var, cond: LogicExpr)                    extends LogicExpr

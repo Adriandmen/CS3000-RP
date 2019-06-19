@@ -1,58 +1,27 @@
 package bep.free
 
-import bep.core.{Expr, Pattern, Value}
+import bep.core.{Expr, Value}
+import bep.free.Free.Bind
 
-import language.higherKinds
-import scala.collection.immutable.Stream.Empty
+import scala.language.higherKinds
+import scala.language.implicitConversions
 
-trait Free[A] {
-  def bind(k: A => Free[A]): Free[A]
-
-  def values(): Stream[Free[A]]
-
-  def get(): A
-
-  def bfs(): Stream[A]
+sealed trait Free[F[_], A] {
+  def bind[B](f: A => Free[F, B]): Free[F, B] = Bind(this, f)
 }
 
 object Free {
-  def bfs[A](free: Stream[Free[A]]): Stream[A] = {
-    free match {
-      case Empty => Empty
-      case Pure(x) #:: xs => x #:: bfs(xs)
-      case (f @ Fork(_, _, _)) #:: xs => bfs(xs #::: f.values())
-      case Flow(x) #:: xs => bfs(xs #::: x)
-      case x => throw new IllegalArgumentException(s"Could not parse $x")
-    }
+  type Id[A] = A
+
+  // Mapping trait. Used for implementations of interpreters / executors.
+  trait ~>[F[_], G[_]] {
+    def interp[A](fa: F[A]): Free[F, A]
+    def handle[A](free: Free[F, A]): G[A]
   }
-}
 
-case class Pure[A](x: A) extends Free[A] {
-  override def bind(k: A => Free[A]): Free[A] = k(x)
+  implicit def value2free[A](value: Value): Free[Expr, A] = Pure(value.asInstanceOf[A])
 
-  override def values(): Stream[Free[A]] = Stream(Pure(x))
-
-  override def get(): A = x
-
-  override def bfs(): Stream[A] = Free.bfs(this.values())
-}
-
-case class Fork[A](v: A, patterns: List[(Pattern, Expr)], f: (A, List[(Pattern, Expr)]) => Stream[Free[A]]) extends Free[A] {
-  override def bind(k: A => Free[A]): Free[A] = Flow(this.values()).bind(k)
-
-  override def values(): Stream[Free[A]] = f(v, patterns)
-
-  override def get(): A = this.bfs().head
-
-  override def bfs(): Stream[A] = Free.bfs(this.values())
-}
-
-case class Flow[A](x: Stream[Free[A]]) extends Free[A] {
-  override def bind(k: A => Free[A]): Free[A] = Flow(x.map(f => f.bind(k)))
-
-  override def values(): Stream[Free[A]] = x
-
-  override def get(): A = this.bfs().head
-
-  override def bfs(): Stream[A] = Free.bfs(x)
+  case class Pure[F[_], A](a: A) extends Free[F, A]
+  case class Bind[F[_], X, A](x: Free[F, X], f: X => Free[F, A]) extends Free[F, A]
+  case class Fork[F[_], A](fa: List[F[A]], f: F[A] => Free[F, A]) extends Free[F, A]
 }
